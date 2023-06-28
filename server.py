@@ -202,6 +202,22 @@ class App:
                     self.wfile.write(json.dumps(list(app.api.playlists.keys())).encode())
                     return
 
+                if self.path == '/status':
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'application/json')
+                    self.end_headers()
+                    if app.player.currently_playing:
+                        data = {
+                            'playing': True,
+                            'path': app.player.currently_playing
+                        }
+                    else:
+                        data = {
+                            'playing': False
+                        }
+                    self.wfile.write(json.dumps(data).encode())
+                    return
+
                 self.send_response(404)
                 self.end_headers()
 
