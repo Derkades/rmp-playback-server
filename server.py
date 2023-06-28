@@ -27,11 +27,11 @@ class AudioPlayer():
     previous_playlist: str | None = None
     enabled_playlists: list[str]
     process: subprocess.Popen | None = None
-    library: 'LibraryManager'
+    api: 'Api'
     currently_playing: str | None = None
 
-    def __init__(self, library):
-        self.library = library
+    def __init__(self, api):
+        self.api = api
         self.enabled_playlists = ['DK', 'JK']
 
         self.now_playing_submitter()
@@ -51,7 +51,7 @@ class AudioPlayer():
             self.process = None
 
         playlist = self.select_playlist()
-        track = self.library.choose_track(playlist)
+        track = self.api.choose_track(playlist)
         self.currently_playing = track
         print('Chosen track:', track)
 
@@ -59,7 +59,7 @@ class AudioPlayer():
             self.process = subprocess.Popen(['ffplay', '-i', '-', '-nodisp', '-autoexit', '-hide_banner'], stdin=subprocess.PIPE)
 
             try:
-                self.library.download_to_pipe(track, self.process.stdin)
+                self.api.download_to_pipe(track, self.process.stdin)
                 self.process.communicate()
             except BrokenPipeError:
                 print('Broken pipe')
@@ -91,7 +91,7 @@ class AudioPlayer():
             while True:
                 try:
                     if self.currently_playing:
-                        self.library.submit_now_playing(self.currently_playing, 0)
+                        self.api.submit_now_playing(self.currently_playing, 0)
                 except requests.RequestException:
                     traceback.print_exc()
 
@@ -100,7 +100,7 @@ class AudioPlayer():
         Thread(target=target, daemon=True).start()
 
 
-class LibraryManager():
+class Api():
     server: str
     headers: dict[str, str]
     playlists: dict[str, Playlist]
@@ -173,15 +173,15 @@ class LibraryManager():
 
 
 class App:
-    library: LibraryManager
+    api: Api
     player: AudioPlayer
 
     def __init__(self):
         with open('config.json', 'r') as config_file:
             config = json.load(config_file)
 
-        self.library = LibraryManager(config)
-        self.player = AudioPlayer(self.library)
+        self.api = Api(config)
+        self.player = AudioPlayer(self.api)
 
         self.start_server()
 
@@ -199,7 +199,7 @@ class App:
                     self.send_response(200)
                     self.send_header('Content-Type', 'application/json')
                     self.end_headers()
-                    self.wfile.write(json.dumps(list(app.library.playlists.keys())).encode())
+                    self.wfile.write(json.dumps(list(app.api.playlists.keys())).encode())
                     return
 
                 self.send_response(404)
