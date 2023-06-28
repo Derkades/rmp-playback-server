@@ -2,7 +2,6 @@ import json
 from dataclasses import dataclass
 import subprocess
 from threading import Thread
-import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import requests
