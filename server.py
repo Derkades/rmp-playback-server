@@ -58,7 +58,7 @@ class AudioPlayer():
         print('Chosen track:', track)
 
         def target():
-            self.process = subprocess.Popen(['ffplay', '-i', '-', '-nodisp', '-autoexit', '-hide_banner'], stdin=subprocess.PIPE)
+            self.process = subprocess.Popen(['ffplay', '-i', '-', '-nodisp', '-autoexit', '-hide_banner'], stdin=subprocess.PIPE, stderr=subprocess.DEVNULL)
 
             try:
                 self.api.download_to_pipe(track, self.process.stdin)
@@ -116,6 +116,7 @@ class Api():
         self.server = config['server']
         self.player_id = str(uuid.uuid4())
         self.headers = {'User-Agent': 'rmp-playback-server'}
+        print('Logging in')
         r = requests.post(self.server + '/login',
                         headers={'Content-Type': 'application/json',
                                  **self.headers},
@@ -124,6 +125,7 @@ class Api():
         token = r.json()['token']
         self.headers['Cookie'] = 'token=' + token
 
+        print('Downloading playlist and track list')
         r = requests.get(self.server + '/track_list',
                          headers=self.headers)
         r.raise_for_status()
@@ -141,6 +143,7 @@ class Api():
 
     def csrf(self):
         # TODO cache token
+        print('Getting CSRF token')
         r = requests.get(self.server + '/get_csrf', headers=self.headers)
         r.raise_for_status()
         token = r.json()['token']
@@ -189,9 +192,9 @@ class App:
         self.api = Api(config)
         self.player = AudioPlayer(self.api)
 
-        self.start_server()
+        self.start_server(config['bind'], config['port'])
 
-    def start_server(app):
+    def start_server(app, bind: str, port: int):
         class RequestHandler(BaseHTTPRequestHandler):
 
             def respond_ok(self):
@@ -259,7 +262,9 @@ class App:
                 self.send_response(404)
                 self.end_headers()
 
-        server = HTTPServer(('localhost', 8181), RequestHandler)
+        print(f'Starting HTTP server on {bind}:{port}')
+
+        server = HTTPServer((bind, port), RequestHandler)
         try:
             server.serve_forever()
         except KeyboardInterrupt:
