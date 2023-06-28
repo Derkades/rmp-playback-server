@@ -3,6 +3,9 @@ from dataclasses import dataclass
 import subprocess
 from threading import Thread
 from http.server import BaseHTTPRequestHandler, HTTPServer
+import uuid
+import time
+import traceback
 
 import requests
 
@@ -25,10 +28,13 @@ class AudioPlayer():
     enabled_playlists: list[str]
     process: subprocess.Popen | None = None
     library: 'LibraryManager'
+    currently_playing: str | None = None
 
     def __init__(self, library):
         self.library = library
         self.enabled_playlists = ['DK', 'JK']
+
+        self.now_playing_submitter()
 
     def set_audio(self, audio: bytes):
         self.audio = audio
@@ -36,6 +42,7 @@ class AudioPlayer():
     def stop(self):
         self.process.send_signal(2)
         self.process = None
+        self.currently_playing = None
 
     def start(self):
         if self.process:
@@ -45,6 +52,7 @@ class AudioPlayer():
 
         playlist = self.select_playlist()
         track = self.library.choose_track(playlist)
+        self.currently_playing = track
         print('Chosen track:', track)
 
         def target():
@@ -55,6 +63,8 @@ class AudioPlayer():
                 self.process.communicate()
             except BrokenPipeError:
                 print('Broken pipe')
+
+            self.currently_playing = None
 
             if self.process:
                 print('Playing next track')
@@ -76,14 +86,29 @@ class AudioPlayer():
         print('Chosen playlist:', self.previous_playlist)
         return self.previous_playlist
 
+    def now_playing_submitter(self):
+        def target():
+            while True:
+                try:
+                    if self.currently_playing:
+                        self.library.submit_now_playing(self.currently_playing, 0)
+                except requests.RequestException:
+                    traceback.print_exc()
+
+                time.sleep(5)
+
+        Thread(target=target, daemon=True).start()
+
 
 class LibraryManager():
     server: str
     headers: dict[str, str]
     playlists: dict[str, Playlist]
+    player_id: str
 
     def __init__(self, config):
         self.server = config['server']
+        self.player_id = str(uuid.uuid4())
         self.headers = {'User-Agent': 'rmp-playback-server'}
         r = requests.post(self.server + '/login',
                         headers={'Content-Type': 'application/json',
@@ -133,6 +158,19 @@ class LibraryManager():
         r.raise_for_status()
         for chunk in r.iter_content(4096):
             stdin.write(chunk)
+
+    def submit_now_playing(self, track_path: str, progress: int):
+        csrf = self.csrf()
+        r = requests.post(self.server + '/now_playing',
+                          json={'csrf': csrf,
+                                'player_id': self.player_id,
+                                'track': track_path,
+                                'paused': False,
+                                'progress': progress},
+                          headers={'Content-Type': 'application/json',
+                                   **self.headers})
+        r.raise_for_status()
+
 
 class App:
     library: LibraryManager
