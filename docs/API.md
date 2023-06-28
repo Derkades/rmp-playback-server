@@ -2,14 +2,21 @@
 
 ## GET `/all_playlists`
 
-Returns a JSON array of all playlists.
+Returns a JSON array of all playlist names.
 
+## GET `/playlists`
+
+Returns JSON array of enabled playlist names.
 
 ## GET `/status`
 
-Returns current playback status as json object
+Returns current playback status as json object:
 * `playing` bool
 * `path` str (optional)
+
+## POST `/playlists`
+
+Set enabled playlists. Post body should be a json array of playlist names.
 
 ## POST `/stop`
 

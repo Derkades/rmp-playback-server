@@ -32,7 +32,7 @@ class AudioPlayer():
 
     def __init__(self, api):
         self.api = api
-        self.enabled_playlists = ['DK', 'JK']
+        self.enabled_playlists = []
 
         self.now_playing_submitter()
 
@@ -51,6 +51,8 @@ class AudioPlayer():
             self.process = None
 
         playlist = self.select_playlist()
+        if playlist is None:
+            return
         track = self.api.choose_track(playlist)
         self.currently_playing = track
         print('Chosen track:', track)
@@ -73,13 +75,17 @@ class AudioPlayer():
         print('Starting playback')
         Thread(target=target, daemon=True).start()
 
-    def select_playlist(self) -> str:
+    def select_playlist(self) -> str | None:
+        if not self.enabled_playlists:
+            print('No playlists enabled!')
+            return None
+
         if self.previous_playlist:
-            cur_index = self.enabled_playlists.index(self.previous_playlist)
-            if cur_index == -1:
-                self.previous_playlist = self.enabled_playlists[0]
-            else:
+            try:
+                cur_index = self.enabled_playlists.index(self.previous_playlist)
                 self.previous_playlist = self.enabled_playlists[(cur_index + 1) % len(self.enabled_playlists)]
+            except ValueError:  # not in list
+                self.previous_playlist = self.enabled_playlists[0]
         else:
             self.previous_playlist = self.enabled_playlists[0]
 
@@ -202,6 +208,13 @@ class App:
                     self.wfile.write(json.dumps(list(app.api.playlists.keys())).encode())
                     return
 
+                if self.path == '/playlists':
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps(app.player.enabled_playlists).encode())
+                    return
+
                 if self.path == '/status':
                     self.send_response(200)
                     self.send_header('Content-Type', 'application/json')
@@ -231,6 +244,17 @@ class App:
                     app.player.start()
                     self.respond_ok()
                     return
+
+                if self.path == '/playlists':
+                    content_length = int(self.headers.get('Content-Length'))
+                    input = self.rfile.read(content_length)
+                    playlists = json.loads(input.decode())
+                    assert isinstance(playlists, list)
+                    for playlist in playlists:
+                        assert isinstance(playlist, str)
+                        assert playlist in app.api.playlists
+                    print('Changed enabled playlists:', playlists)
+                    app.player.enabled_playlists = playlists
 
                 self.send_response(404)
                 self.end_headers()
