@@ -66,9 +66,9 @@ class AudioPlayer():
             except BrokenPipeError:
                 print('Broken pipe')
 
-            self.currently_playing = None
-
             if self.process:
+                self.api.submit_played(self.currently_playing)
+                self.currently_playing = None
                 print('Playing next track')
                 self.start()
 
@@ -101,7 +101,7 @@ class AudioPlayer():
                 except requests.RequestException:
                     traceback.print_exc()
 
-                time.sleep(5)
+                time.sleep(10)
 
         Thread(target=target, daemon=True).start()
 
@@ -169,6 +169,7 @@ class Api():
             stdin.write(chunk)
 
     def submit_now_playing(self, track_path: str, progress: int):
+        print('Submit now playing')
         csrf = self.csrf()
         r = requests.post(self.server + '/now_playing',
                           json={'csrf': csrf,
@@ -176,6 +177,18 @@ class Api():
                                 'track': track_path,
                                 'paused': False,
                                 'progress': progress},
+                          headers={'Content-Type': 'application/json',
+                                   **self.headers})
+        r.raise_for_status()
+
+
+    def submit_played(self, track_path: str):
+        print('Submit played')
+        csrf = self.csrf()
+        r = requests.post(self.server + '/history_played',
+                          json={'csrf': csrf,
+                                'track': track_path,
+                                'lastfmEligible': False},  # TODO determine eligibility properly
                           headers={'Content-Type': 'application/json',
                                    **self.headers})
         r.raise_for_status()
