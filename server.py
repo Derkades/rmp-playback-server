@@ -1,6 +1,5 @@
 import json
 from dataclasses import dataclass
-import subprocess
 from threading import Thread
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import uuid
@@ -29,7 +28,6 @@ class Playlist:
 class AudioPlayer():
     previous_playlist: str | None = None
     enabled_playlists: list[str]
-    process: subprocess.Popen | None = None
     api: 'Api'
     currently_playing: str | None = None
     vlc_instance: vlc.Instance
