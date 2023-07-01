@@ -143,6 +143,8 @@ class Api():
     headers: dict[str, str]
     playlists: dict[str, Playlist]
     player_id: str
+    cached_csrf: str = None
+    cached_csrf_time: int = 0
 
     def __init__(self, config):
         self.server = config['server']
@@ -174,11 +176,15 @@ class Api():
             self.playlists = playlists
 
     def csrf(self):
-        # TODO cache token
-        print('Getting CSRF token')
+        if time.time() - self.cached_csrf_time < 300:
+            return self.cached_csrf
+
+        print('Getting new CSRF token')
         r = requests.get(self.server + '/get_csrf', headers=self.headers)
         r.raise_for_status()
         token = r.json()['token']
+        self.cached_csrf = token
+        self.cached_csrf_time = int(time.time())
         return token
 
     def choose_track(self, playlist: str) -> str:
