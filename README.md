@@ -8,7 +8,7 @@
 ## Usage
 
 1. Create a `config.json` file with credentials (see `config.json.example`).
-2. Run `python3 server.py`
+2. Run `python3 src/server.py`
 
 ## API
 

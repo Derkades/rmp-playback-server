@@ -18,8 +18,8 @@ Pauses music. Nothing happens if music is already paused or no music is playing.
 
 ## POST `/play`
 
-If music is paused, playback is resumed. If no music was playing, a new track is loaded and started.
+If music is paused, playback is resumed. If no music was playing, a new track is loaded and started. If no playlists are enabled, nothing happens.
 
 ## POST `/next`
 
-A new track is loaded from the next playlist, and started.
+A new track is loaded from the next playlist, and started. If no playlists are enabled, nothing happens.
