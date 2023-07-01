@@ -103,14 +103,14 @@ class Api():
         r.raise_for_status()
         return r.content
 
-    def submit_now_playing(self, track_path: str, progress: int):
+    def submit_now_playing(self, track_path: str, progress: int, paused: bool) -> None:
         print('Submit now playing')
         csrf = self.csrf()
         r = requests.post(self.server + '/now_playing',
                           json={'csrf': csrf,
                                 'player_id': self.player_id,
                                 'track': track_path,
-                                'paused': False,
+                                'paused': paused,
                                 'progress': progress},
                           headers={'Content-Type': 'application/json',
                                    **self.headers})
