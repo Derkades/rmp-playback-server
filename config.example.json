@@ -4,5 +4,6 @@
     "server": "https://music.raphson.nl",
     "username": "",
     "password": "",
-    "default_playlists": []
+    "default_playlists": [],
+    "use_shm": true
 }

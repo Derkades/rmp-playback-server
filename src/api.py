@@ -12,6 +12,11 @@ class Track:
     path: str
     duration: int
     title: str
+    album: str
+    album_artist: str
+    year: int
+    artists: list[str] | None
+    tags: list[str]
 
 
 @dataclass
@@ -48,19 +53,29 @@ class Api():
         token = r.json()['token']
         self.headers['Cookie'] = 'token=' + token
 
+        self.update_track_list()
+
+    def update_track_list(self):
         print('Downloading playlist and track list')
         r = requests.get(self.server + '/track_list',
                          headers=self.headers)
         r.raise_for_status()
 
         track_list = r.json()
-
         self.playlists = {}
         self.tracks = {}
+
         for playlist in track_list['playlists']:
             tracks: dict[str, Track] = {}
             for track in playlist['tracks']:
-                track_obj = Track(track['path'], track['duration'], track['title'])
+                track_obj = Track(track['path'],
+                                  track['duration'],
+                                  track['title'],
+                                  track['album'],
+                                  track['album_artist'],
+                                  track['year'],
+                                  track['artists'],
+                                  track['tags'])
                 tracks[track['path']] = track_obj
                 self.tracks[track['path']] = track_obj
 

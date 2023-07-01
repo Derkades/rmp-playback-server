@@ -17,7 +17,7 @@ class App:
 
         self.api = Api(config)
         self.downloader = Downloader(self.api, config['default_playlists'])
-        self.player = AudioPlayer(self.api, self.downloader)
+        self.player = AudioPlayer(config["use_shm"], self.api, self.downloader)
 
         self.start_server(config['bind'], config['port'])
 
@@ -31,22 +31,39 @@ class App:
                 self.wfile.write(b'ok')
 
             def do_GET(self):
-                if self.path == '/status':
+                if self.path == '/state':
                     self.send_response(200)
                     self.send_header('Content-Type', 'application/json')
                     self.end_headers()
                     data = {
-                        'all_playlists': list(app.api.playlists.keys()),
-                        'enabled_playlists': app.downloader.enabled_playlists,
-                        'has_media': app.player.has_media(),
-                        'is_playing': app.player.is_playing(),
-                        'current_track': app.player.currently_playing,
-                        'position': app.player.postition(),
-                        'position_percent': app.player.postition_percent(),
-                        'length': app.player.length(),
+                        'playlists': {
+                            'all': list(app.api.playlists.keys()),
+                            'enabled': app.downloader.enabled_playlists,
+                        },
+                        'player': {
+                            'has_media': app.player.has_media(),
+                            'is_playing': app.player.is_playing(),
+                            'position': app.player.postition(),
+                            'position_percent': app.player.postition_percent(),
+                            'duration': app.player.duration(),
+                        }
                     }
+                    track = app.player.currently_playing
+                    if track:
+                        data['currently_playing'] = {
+                            'path': track.path,
+                            'duration': track.duration,
+                            'title': track.title,
+                            'album': track.album,
+                            'album_artist': track.album_artist,
+                            'year': track.year,
+                            'artists': track.artists,
+                            'tags': track.tags,
+                        }
+                    else:
+                        data['currently_playing'] = None
 
-                    self.wfile.write(json.dumps(data, indent=True).encode())
+                    self.wfile.write(json.dumps(data).encode())
                     return
 
                 self.send_response(404)

@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 
 class AudioPlayer():
-
+    temp_file: str
     downloader: 'Downloader'
     api: 'Api'
     currently_playing: Optional['Track'] = None
@@ -24,8 +24,10 @@ class AudioPlayer():
     vlc_events: vlc.EventManager
 
     def __init__(self,
+                 use_shm: bool,
                  api: 'Api',
                  downloader: 'Downloader'):
+        self.temp_file = '/dev/shm/rmp-audio' if use_shm else '/tmp/rmp-audio'
         self.api = api
         self.downloader = downloader
 
@@ -46,6 +48,7 @@ class AudioPlayer():
     def stop(self):
         self.vlc_player.stop()
         self.vlc_player.set_media(None)
+        self.currently_playing = None
 
     def pause(self):
         self.vlc_player.set_pause(True)
@@ -68,14 +71,10 @@ class AudioPlayer():
         self.currently_playing = download.track
         print('Playing track:', download.track.path)
 
-        fd, name = tempfile.mkstemp(dir='/dev/shm')
-
-        with os.fdopen(fd, 'wb') as audio_file:
-            print('Writing audio to temp file: ', name)
-            audio_file.truncate()
+        with open(self.temp_file, 'wb') as audio_file:
             audio_file.write(download.audio)
 
-        media = self.vlc_instance.media_new(name)
+        media = self.vlc_instance.media_new(self.temp_file)
         self.vlc_player.set_media(media)
         self.vlc_player.play()
 
@@ -88,7 +87,7 @@ class AudioPlayer():
     def postition(self) -> int:
         return self.vlc_player.get_time() // 1000
 
-    def length(self) -> int:
+    def duration(self) -> int:
         return self.vlc_player.get_length() // 1000
 
     def postition_percent(self) -> int:

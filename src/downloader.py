@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from threading import Thread
 import time
 import traceback
+import math
 
 
 from requests import RequestException
@@ -22,7 +23,7 @@ class DownloadedTrack:
 class Downloader:
     previous_playlist: Optional[str] = None
     enabled_playlists: list[str]
-    cache_size = 2
+    cache_size = 15
     cache: dict[Deque[DownloadedTrack]]
     api: 'Api'
 
@@ -43,10 +44,11 @@ class Downloader:
 
 
     def fill_cache(self):
+        cache_size = math.ceil(self.cache_size / len(self.enabled_playlists))
         for playlist_name in self.enabled_playlists:
             while True:
                 if playlist_name in self.cache:
-                    if len(self.cache[playlist_name]) >= self.cache_size:
+                    if len(self.cache[playlist_name]) >= cache_size:
                         break
                 else:
                     self.cache[playlist_name] = deque()
