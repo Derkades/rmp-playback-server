@@ -128,7 +128,7 @@ class AudioPlayer():
         def target():
             while True:
                 try:
-                    if self.currently_playing:
+                    if self.has_media() and self.currently_playing:
                         self.api.submit_now_playing(self.currently_playing, self.postition_percent())
                 except requests.RequestException:
                     traceback.print_exc()
