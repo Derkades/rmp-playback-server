@@ -23,14 +23,15 @@ class DownloadedTrack:
 class Downloader:
     previous_playlist: Optional[str] = None
     enabled_playlists: list[str]
-    cache_size = 15
+    cache_size: int
     cache: dict[Deque[DownloadedTrack]]
     api: 'Api'
 
-    def __init__(self, api, default_playlists):
+    def __init__(self, api: 'Api', default_playlists: list[str], cache_size: int):
         self.cache = {}
         self.api = api
         self.enabled_playlists = default_playlists
+        self.cache_size = cache_size
 
         def target():
             while True:

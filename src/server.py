@@ -16,7 +16,7 @@ class App:
             config = json.load(config_file)
 
         self.api = Api(config)
-        self.downloader = Downloader(self.api, config['default_playlists'])
+        self.downloader = Downloader(self.api, config['default_playlists'], config["cache_size"])
         self.player = AudioPlayer(config["use_shm"], self.api, self.downloader)
 
         self.start_server(config['bind'], config['port'])
