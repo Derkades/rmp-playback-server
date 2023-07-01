@@ -1,8 +1,9 @@
-from typing import TYPE_CHECKING, Deque
+from typing import TYPE_CHECKING, Deque, Optional
 from collections import deque
 from dataclasses import dataclass
 from threading import Thread
 import time
+import traceback
 
 
 from requests import RequestException
@@ -19,19 +20,30 @@ class DownloadedTrack:
 
 
 class Downloader:
+    previous_playlist: Optional[str] = None
+    enabled_playlists: list[str]
     cache_size = 2
     cache: dict[Deque[DownloadedTrack]]
     api: 'Api'
 
-    def __init__(self, api):
+    def __init__(self, api, default_playlists):
         self.cache = {}
         self.api = api
+        self.enabled_playlists = default_playlists
 
-    def fill_cache(self, enabled_playlists: list[str]):
-        Thread(target=lambda: self._fill_cache(enabled_playlists), daemon=True).start()
+        def target():
+            while True:
+                try:
+                    self.fill_cache()
+                except:
+                    traceback.print_exc()
+                time.sleep(10)
 
-    def _fill_cache(self, enabled_playlists: list[str]):
-        for playlist_name in enabled_playlists:
+        Thread(target=target, daemon=True).start()
+
+
+    def fill_cache(self):
+        for playlist_name in self.enabled_playlists:
             while True:
                 if playlist_name in self.cache:
                     if len(self.cache[playlist_name]) >= self.cache_size:
@@ -53,15 +65,34 @@ class Downloader:
                     downloaded = DownloadedTrack(track, audio)
                     self.cache[playlist_name].append(downloaded)
                 except RequestException:
-                    print('Failed to download track')
+                    print('Failed to download track for playlist', playlist_name)
                     time.sleep(1)
 
         print('Cache is ready')
 
-    def get_track(self, playlist: str) -> DownloadedTrack:
+    def select_playlist(self) -> str | None:
+        if not self.enabled_playlists:
+            print('No playlists enabled!')
+            return None
+
+        if self.previous_playlist:
+            try:
+                cur_index = self.enabled_playlists.index(self.previous_playlist)
+                self.previous_playlist = self.enabled_playlists[(cur_index + 1) % len(self.enabled_playlists)]
+            except ValueError:  # not in list
+                self.previous_playlist = self.enabled_playlists[0]
+        else:
+            self.previous_playlist = self.enabled_playlists[0]
+
+        print('Chosen playlist:', self.previous_playlist)
+        return self.previous_playlist
+
+    def get_track(self) -> Optional[DownloadedTrack]:
+        playlist = self.select_playlist()
+        if playlist is None:
+            return None
+
         if playlist not in self.cache or len(self.cache[playlist]) == 0:
-            print('Cache is empty for this playlist. Trying again...')
-            time.sleep(1)
-            return self.get_track(playlist)
+            return None
 
         return self.cache[playlist].popleft()

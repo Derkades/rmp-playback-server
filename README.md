@@ -3,7 +3,20 @@
 ## Requirements
 
 * Python 3
-* FFplay (part of FFmpeg)
+* Python dependencies, see requirements.txt
+* VLC media player
+
+## Installation
+
+### Debian
+```
+apt install python3-requests python3-vlc
+```
+
+### Fedora
+```
+dnf install python3-requests python3-vlc
+```
 
 ## Usage
 

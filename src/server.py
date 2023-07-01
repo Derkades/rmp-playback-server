@@ -16,10 +16,8 @@ class App:
             config = json.load(config_file)
 
         self.api = Api(config)
-        self.downloader = Downloader(self.api)
-        self.player = AudioPlayer(self.api, self.downloader, config['default_playlists'])
-
-        self.downloader.fill_cache(self.player.enabled_playlists)
+        self.downloader = Downloader(self.api, config['default_playlists'])
+        self.player = AudioPlayer(self.api, self.downloader)
 
         self.start_server(config['bind'], config['port'])
 
@@ -39,7 +37,7 @@ class App:
                     self.end_headers()
                     data = {
                         'all_playlists': list(app.api.playlists.keys()),
-                        'enabled_playlists': app.player.enabled_playlists,
+                        'enabled_playlists': app.downloader.enabled_playlists,
                         'has_media': app.player.has_media(),
                         'is_playing': app.player.is_playing(),
                         'current_track': app.player.currently_playing,

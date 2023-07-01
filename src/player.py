@@ -15,8 +15,7 @@ if TYPE_CHECKING:
 
 
 class AudioPlayer():
-    previous_playlist: str | None = None
-    enabled_playlists: list[str]
+
     downloader: 'Downloader'
     api: 'Api'
     currently_playing: Optional['Track'] = None
@@ -26,11 +25,9 @@ class AudioPlayer():
 
     def __init__(self,
                  api: 'Api',
-                 downloader: 'Downloader',
-                 default_enabled_playlists: list[str]):
+                 downloader: 'Downloader'):
         self.api = api
         self.downloader = downloader
-        self.enabled_playlists = default_enabled_playlists
 
         self.vlc_instance = vlc.Instance('--file-caching=0')
         self.vlc_player = self.vlc_instance.media_player_new()
@@ -43,7 +40,7 @@ class AudioPlayer():
         print('Media ended, play next')
         def target():
             self.api.submit_played(self.currently_playing.path)
-            self.next()
+            self.next(retry=True)
         Thread(target=target, daemon=True).start()
 
     def stop(self):
@@ -59,12 +56,15 @@ class AudioPlayer():
         else:
             self.next()
 
-    def next(self):
-        playlist = self.select_playlist()
-        if playlist is None:
-            return
+    def next(self, retry=False):
+        download = self.downloader.get_track()
+        if not download:
+            print('No cached track available')
+            if retry:
+                print('Retry enabled, going to try again')
+                time.sleep(5)
+                self.next(retry)
 
-        download = self.downloader.get_track(playlist)
         self.currently_playing = download.track
         print('Playing track:', download.track.path)
 
@@ -78,8 +78,6 @@ class AudioPlayer():
         media = self.vlc_instance.media_new(name)
         self.vlc_player.set_media(media)
         self.vlc_player.play()
-
-        self.downloader.fill_cache(self.enabled_playlists)
 
     def has_media(self) -> bool:
         return self.vlc_player.get_media() is not None
@@ -99,23 +97,6 @@ class AudioPlayer():
     def seek(self, position: int):
         print('Seek to:', position)
         self.vlc_player.set_time(position * 1000)
-
-    def select_playlist(self) -> str | None:
-        if not self.enabled_playlists:
-            print('No playlists enabled!')
-            return None
-
-        if self.previous_playlist:
-            try:
-                cur_index = self.enabled_playlists.index(self.previous_playlist)
-                self.previous_playlist = self.enabled_playlists[(cur_index + 1) % len(self.enabled_playlists)]
-            except ValueError:  # not in list
-                self.previous_playlist = self.enabled_playlists[0]
-        else:
-            self.previous_playlist = self.enabled_playlists[0]
-
-        print('Chosen playlist:', self.previous_playlist)
-        return self.previous_playlist
 
     def now_playing_submitter(self):
         def target():
