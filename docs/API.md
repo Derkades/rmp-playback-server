@@ -1,18 +1,8 @@
 # API
 
-## GET `/all_playlists`
-
-Returns a JSON array of all playlist names.
-
-## GET `/playlists`
-
-Returns JSON array of enabled playlist names.
-
 ## GET `/status`
 
-Returns current playback status as json object:
-* `playing` bool
-* `path` str (optional)
+To be documented, endpoint is still frequently changing.
 
 ## POST `/playlists`
 
@@ -20,8 +10,16 @@ Set enabled playlists. Post body should be a json array of playlist names.
 
 ## POST `/stop`
 
-Stop music, if currently playing.
+Stop music, if currently playing. Nothing happens if no music is playing.
 
-## POST `/start`
+## POST `/pause`
 
-Start music. If already playing, stop current playback and start playing a new track.
+Pauses music. Nothing happens if music is already paused or no music is playing.
+
+## POST `/play`
+
+If music is paused, playback is resumed. If no music was playing, a new track is loaded and started.
+
+## POST `/next`
+
+A new track is loaded from the next playlist, and started.

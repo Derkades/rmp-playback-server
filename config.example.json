@@ -3,5 +3,6 @@
     "port": 8181,
     "server": "https://music.raphson.nl",
     "username": "",
-    "password": ""
+    "password": "",
+    "default_playlists": []
 }

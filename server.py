@@ -6,8 +6,11 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 import uuid
 import time
 import traceback
+import tempfile
+import os
 
 import requests
+import vlc
 
 
 @dataclass
@@ -29,27 +32,42 @@ class AudioPlayer():
     process: subprocess.Popen | None = None
     api: 'Api'
     currently_playing: str | None = None
+    vlc_instance: vlc.Instance
+    vlc_player: vlc.MediaPlayer
+    vlc_events: vlc.EventManager
 
-    def __init__(self, api):
+    def __init__(self, api, enabled_playlists):
         self.api = api
-        self.enabled_playlists = []
+        self.enabled_playlists = enabled_playlists
+
+        self.vlc_instance = vlc.Instance()
+        self.vlc_player = self.vlc_instance.media_player_new()
+        self.vlc_events = self.vlc_player.event_manager()
+        self.vlc_events.event_attach(vlc.EventType.MediaPlayerEndReached, self.on_media_end)
 
         self.now_playing_submitter()
 
-    def set_audio(self, audio: bytes):
-        self.audio = audio
+    def on_media_end(self, event):
+        print('Media ended, play next')
+        def target():
+            self.api.submit_played(self.currently_playing)
+            self.next()
+        Thread(target=target, daemon=True).start()
 
     def stop(self):
-        self.process.send_signal(2)
-        self.process = None
-        self.currently_playing = None
+        self.vlc_player.stop()
+        self.vlc_player.set_media(None)
 
-    def start(self):
-        if self.process:
-            print('Killing existing player')
-            self.process.send_signal(2)
-            self.process = None
+    def pause(self):
+        self.vlc_player.set_pause(True)
 
+    def play(self):
+        if self.has_media():
+            self.vlc_player.play()
+        else:
+            self.next()
+
+    def next(self):
         playlist = self.select_playlist()
         if playlist is None:
             return
@@ -57,23 +75,37 @@ class AudioPlayer():
         self.currently_playing = track
         print('Chosen track:', track)
 
-        def target():
-            self.process = subprocess.Popen(['ffplay', '-i', '-', '-nodisp', '-autoexit', '-hide_banner'], stdin=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        audio = self.api.get_audio(track)
 
-            try:
-                self.api.download_to_pipe(track, self.process.stdin)
-                self.process.communicate()
-            except BrokenPipeError:
-                print('Broken pipe')
+        fd, name = tempfile.mkstemp()
 
-            if self.process:
-                self.api.submit_played(self.currently_playing)
-                self.currently_playing = None
-                print('Playing next track')
-                self.start()
+        with os.fdopen(fd, 'wb') as audio_file:
+            print('Writing audio to temp file: ', name)
+            audio_file.truncate()
+            audio_file.write(audio)
 
-        print('Starting playback')
-        Thread(target=target, daemon=True).start()
+        media = self.vlc_instance.media_new(name)
+        self.vlc_player.set_media(media)
+        self.vlc_player.play()
+
+    def has_media(self) -> bool:
+        return self.vlc_player.get_media() is not None
+
+    def is_playing(self) -> bool:
+        return self.vlc_player.is_playing() == 1
+
+    def postition(self) -> int:
+        return self.vlc_player.get_time() // 1000
+
+    def length(self) -> int:
+        return self.vlc_player.get_length() // 1000
+
+    def postition_percent(self) -> int:
+        return int(self.vlc_player.get_time() / self.vlc_player.get_length() * 100)
+
+    def seek(self, position: int):
+        print('Seek to:', position)
+        self.vlc_player.set_time(position * 1000)
 
     def select_playlist(self) -> str | None:
         if not self.enabled_playlists:
@@ -97,7 +129,7 @@ class AudioPlayer():
             while True:
                 try:
                     if self.currently_playing:
-                        self.api.submit_now_playing(self.currently_playing, 0)
+                        self.api.submit_now_playing(self.currently_playing, self.postition_percent())
                 except requests.RequestException:
                     traceback.print_exc()
 
@@ -158,7 +190,7 @@ class Api():
         r.raise_for_status()
         return r.json()['path']
 
-    def download_to_pipe(self, track_path: str, stdin) -> bytes:
+    def download_to_pipe(self, track_path: str, stdin) -> None:
         r = requests.get(self.server + '/get_track',
                          params={'path': track_path,
                                  'type': 'webm_opus_high'},
@@ -167,6 +199,14 @@ class Api():
         r.raise_for_status()
         for chunk in r.iter_content(4096):
             stdin.write(chunk)
+
+    def get_audio(self, track_path: str) -> bytes:
+        r = requests.get(self.server + '/get_track',
+                         params={'path': track_path,
+                                 'type': 'webm_opus_high'},
+                         headers=self.headers)
+        r.raise_for_status()
+        return r.content
 
     def submit_now_playing(self, track_path: str, progress: int):
         print('Submit now playing')
@@ -203,7 +243,7 @@ class App:
             config = json.load(config_file)
 
         self.api = Api(config)
-        self.player = AudioPlayer(self.api)
+        self.player = AudioPlayer(self.api, config['default_playlists'])
 
         self.start_server(config['bind'], config['port'])
 
@@ -217,34 +257,22 @@ class App:
                 self.wfile.write(b'ok')
 
             def do_GET(self):
-                if self.path == '/all_playlists':
-                    self.send_response(200)
-                    self.send_header('Content-Type', 'application/json')
-                    self.end_headers()
-                    self.wfile.write(json.dumps(list(app.api.playlists.keys())).encode())
-                    return
-
-                if self.path == '/playlists':
-                    self.send_response(200)
-                    self.send_header('Content-Type', 'application/json')
-                    self.end_headers()
-                    self.wfile.write(json.dumps(app.player.enabled_playlists).encode())
-                    return
-
                 if self.path == '/status':
                     self.send_response(200)
                     self.send_header('Content-Type', 'application/json')
                     self.end_headers()
-                    if app.player.currently_playing:
-                        data = {
-                            'playing': True,
-                            'path': app.player.currently_playing
-                        }
-                    else:
-                        data = {
-                            'playing': False
-                        }
-                    self.wfile.write(json.dumps(data).encode())
+                    data = {
+                        'all_playlists': list(app.api.playlists.keys()),
+                        'enabled_playlists': app.player.enabled_playlists,
+                        'has_media': app.player.has_media(),
+                        'is_playing': app.player.is_playing(),
+                        'current_track': app.player.currently_playing,
+                        'position': app.player.postition(),
+                        'position_percent': app.player.postition_percent(),
+                        'length': app.player.length(),
+                    }
+
+                    self.wfile.write(json.dumps(data, indent=True).encode())
                     return
 
                 self.send_response(404)
@@ -256,8 +284,26 @@ class App:
                     self.respond_ok()
                     return
 
-                if self.path == '/start':
-                    app.player.start()
+                if self.path == '/pause':
+                    app.player.pause()
+                    self.respond_ok()
+                    return
+
+                if self.path == '/play':
+                    app.player.play()
+                    self.respond_ok()
+                    return
+
+                if self.path == '/next':
+                    app.player.next()
+                    self.respond_ok()
+                    return
+
+                if self.path == '/seek':
+                    content_length = int(self.headers.get('Content-Length'))
+                    input = self.rfile.read(content_length)
+                    position = int(input)
+                    app.player.seek(position)
                     self.respond_ok()
                     return
 
