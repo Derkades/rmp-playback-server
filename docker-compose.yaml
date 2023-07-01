@@ -1,0 +1,16 @@
+version: '3'
+
+services:
+
+  player:
+    build: .
+    volumes:
+      - type: bind
+        source: ./config.json
+        target: /app/config.json
+      - type: tmpfs
+        target: /tmp
+    ports: ['8181:8181']
+    # entrypoint: cvlc -v 2 tyest --help
+    devices: ['/dev/snd']
+    user: '1000'
