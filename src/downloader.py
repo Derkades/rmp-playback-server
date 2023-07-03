@@ -39,7 +39,7 @@ class Downloader:
                     self.fill_cache()
                 except:
                     traceback.print_exc()
-                time.sleep(10)
+                time.sleep(1)
 
         Thread(target=target, daemon=True).start()
 
@@ -47,31 +47,29 @@ class Downloader:
     def fill_cache(self):
         cache_size = math.ceil(self.cache_size / len(self.enabled_playlists))
         for playlist_name in self.enabled_playlists:
-            while True:
-                if playlist_name in self.cache:
-                    if len(self.cache[playlist_name]) >= cache_size:
-                        break
-                else:
-                    self.cache[playlist_name] = deque()
+            if playlist_name in self.cache:
+                if len(self.cache[playlist_name]) >= cache_size:
+                    break
+            else:
+                self.cache[playlist_name] = deque()
 
-                try:
-                    track_path = self.api.choose_track(playlist_name)
-                    print('Download:', track_path)
+            try:
+                track_path = self.api.choose_track(playlist_name)
+                print('Download:', track_path)
 
-                    if track_path not in self.api.tracks:
-                        print('Track not in local track list')
-                        time.sleep(1)
-                        continue
-
-                    track = self.api.tracks[track_path]
-                    audio = self.api.get_audio(track_path)
-                    downloaded = DownloadedTrack(track, audio)
-                    self.cache[playlist_name].append(downloaded)
-                except RequestException:
-                    print('Failed to download track for playlist', playlist_name)
+                if track_path not in self.api.tracks:
+                    print('Track not in local track list')
                     time.sleep(1)
 
-        print('Cache is ready')
+                track = self.api.tracks[track_path]
+                audio = self.api.get_audio(track_path)
+                downloaded = DownloadedTrack(track, audio)
+                self.cache[playlist_name].append(downloaded)
+            except RequestException:
+                print('Failed to download track for playlist', playlist_name)
+                time.sleep(1)
+
+        # print('Cache is ready')
 
     def select_playlist(self) -> str | None:
         if not self.enabled_playlists:
