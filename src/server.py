@@ -1,5 +1,7 @@
 import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
+import shutil
+from pathlib import Path
 
 from player import AudioPlayer
 from api import Api
@@ -31,6 +33,15 @@ class App:
                 self.wfile.write(b'ok')
 
             def do_GET(self):
+                if self.path == '/':
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'text/html')
+                    self.end_headers()
+
+                    with Path(Path(__file__).parent, 'index.html').open('rb') as index_file:
+                        shutil.copyfileobj(index_file, self.wfile)
+                    return
+
                 if self.path == '/state':
                     self.send_response(200)
                     self.send_header('Content-Type', 'application/json')
@@ -107,8 +118,9 @@ class App:
                         assert isinstance(playlist, str)
                         assert playlist in app.api.playlists
                     print('Changed enabled playlists:', playlists)
-                    app.player.enabled_playlists = playlists
-                    app.downloader.fill_cache(playlists)
+                    app.downloader.enabled_playlists = playlists
+                    self.respond_ok()
+                    return
 
                 self.send_response(404)
                 self.end_headers()

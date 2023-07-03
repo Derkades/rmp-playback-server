@@ -67,6 +67,7 @@ class AudioPlayer():
                 print('Retry enabled, going to try again')
                 time.sleep(5)
                 self.next(retry)
+            return
 
         self.currently_playing = download.track
         print('Playing track:', download.track.path)

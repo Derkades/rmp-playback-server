@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Raphon Playback Server - Web UI</title>
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                document.getElementById('button-play').addEventListener('click', () => {
+                    fetch('/play', {method: 'POST'})
+                });
+                document.getElementById('button-pause').addEventListener('click', () => {
+                    fetch('/pause', {method: 'POST'})
+                });
+                document.getElementById('button-next').addEventListener('click', () => {
+                    fetch('/next', {method: 'POST'})
+                });
+                document.getElementById('button-stop').addEventListener('click', () => {
+                    fetch('/stop', {method: 'POST'})
+                });
+
+                setInterval(async function() {
+                    const response = await fetch('/state');
+                    const state = await response.json();
+                    const player = state.player;
+
+                    document.getElementById('has-media').textContent = player.has_media;
+                    document.getElementById('is-playing').textContent = player.is_playing;
+                    document.getElementById('position').textContent = player.position;
+                    document.getElementById('duration').textContent = player.duration;
+                    document.getElementById('track-path').textContent = state.currently_playing ? state.currently_playing.path : '';
+                    document.getElementById('track-title').textContent = state.currently_playing ? state.currently_playing.title : '';
+                    document.getElementById('track-artists').textContent = state.currently_playing && state.currently_playing.artists ? state.currently_playing.artists.join(', ') : '';
+                    document.getElementById('track-album').textContent = state.currently_playing ? state.currently_playing.album : '';
+                    document.getElementById('track-album-artist').textContent = state.currently_playing ? state.currently_playing.album_artist : '';
+                    document.getElementById('track-year').textContent = state.currently_playing ? state.currently_playing.year: '';
+                }, 1000);
+
+                document.getElementById('get-playlists').addEventListener('click', async function() {
+                    const response = await fetch('/state');
+                    const state = await response.json();
+                    const playlists = state.playlists;
+
+                    for (playlist of playlists.all) {
+                        const input = document.createElement('input');
+                        input.type = 'checkbox';
+                        input.name = playlist
+                        input.id = 'checkbox-' + playlist.replaceAll(' ', '-');
+                        input.checked = playlists.enabled.indexOf(playlist) !== -1;
+                        input.classList.add('playlist-checkbox');
+
+                        const label = document.createElement('label');
+                        label.htmlFor = 'checkbox-' + playlist.replaceAll(' ', '-');;
+                        label.textContent = playlist;
+
+                        const br = document.createElement('br');
+
+                        document.getElementById('playlist-checkboxes').append(input, label, br);
+                    }
+
+                    document.getElementById('save-playlists').removeAttribute('disabled');
+                    document.getElementById('get-playlists').setAttribute('disabled', '');
+                });
+
+                document.getElementById('save-playlists').addEventListener('click', async function() {
+                    const playlists = []
+                    for (checkbox of document.getElementsByClassName('playlist-checkbox')) {
+                        if (checkbox.checked) {
+                            playlists.push(checkbox.name);
+                        }
+                    }
+                    await fetch('/playlists', {method: 'POST', body: JSON.stringify(playlists)});
+                    document.getElementById('save-playlists').setAttribute('disabled', '');
+                    document.getElementById('get-playlists').removeAttribute('disabled');
+                    document.getElementById('playlist-checkboxes').replaceChildren();
+                });
+            });
+        </script>
+    </head>
+
+    <body>
+        <h3>Controls</h3>
+        <button id="button-play">Play</button>
+        <button id="button-pause">Pause</button>
+        <button id="button-next">Next</button>
+        <button id="button-stop">Stop</button>
+        <h3>Info (updated every second)</h3>
+        <table>
+            <tr>
+                <th colspan="2">Player</th>
+            </tr>
+            <tr>
+                <td>Has media</td>
+                <td id="has-media"></td>
+            </tr>
+            <tr>
+                <td>Is playing</td>
+                <td id="is-playing"></td>
+            </tr>
+            <tr>
+                <td>Position</td>
+                <td id="position"></td>
+            </tr>
+            <tr>
+                <td>Duration</td>
+                <td id="duration"></td>
+            </tr>
+            <tr>
+                <th colspan="2">Track</th>
+            </tr>
+            <tr>
+                <td>Path</td>
+                <td id="track-path"></td>
+            </tr>
+            <tr>
+                <td>Title</td>
+                <td id="track-title"></td>
+            </tr>
+            <tr>
+                <td>Artists</td>
+                <td id="track-artists"></td>
+            </tr>
+            <tr>
+                <td>Album</td>
+                <td id="track-album"></td>
+            </tr>
+            <tr>
+                <td>Album artist</td>
+                <td id="track-album-artist"></td>
+            </tr>
+            <tr>
+                <td>Year</td>
+                <td id="track-year"></td>
+            </tr>
+        </table>
+        <h3>Playlists</h3>
+        <button id="get-playlists">Get playlists</button>
+        <div>
+            <div id="playlist-checkboxes">
+
+            </div>
+            <button id="save-playlists" disabled>Save playlists</button>
+        </div>
+    </body>
+
+</html>
