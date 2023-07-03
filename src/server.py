@@ -57,6 +57,7 @@ class App:
                             'position': app.player.postition(),
                             'position_percent': app.player.postition_percent(),
                             'duration': app.player.duration(),
+                            'volume': app.player.volume(),
                         }
                     }
                     track = app.player.currently_playing

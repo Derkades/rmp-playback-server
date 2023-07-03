@@ -11,9 +11,10 @@
   "player": {
     "has_media": true, // True when paused or playing, false when stopped.
     "is_playing": true, // True when playing, false when paused or stopped
-    "position": 15, // Current playback position
+    "position": 15, // Current playback position (-1 when stopped)
     "position_percent": 7, // Current playback position, as a percentage
-    "duration": 207 // Total track duration as reported by VLC
+    "duration": 207, // Total track duration as reported by VLC (-1 when stopped)
+    "volume": 100 // VLC volume (0-100, -1 when stopped)
   },
   "currently_playing": { // May be null. Present if has_media is true
     "path": "JK/25. Resist and Bite.mp3",

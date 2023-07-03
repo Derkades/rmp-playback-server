@@ -27,6 +27,7 @@
                     document.getElementById('is-playing').textContent = player.is_playing;
                     document.getElementById('position').textContent = player.position;
                     document.getElementById('duration').textContent = player.duration;
+                    document.getElementById('volume').textContent = player.volume;
                     document.getElementById('track-path').textContent = state.currently_playing ? state.currently_playing.path : '';
                     document.getElementById('track-title').textContent = state.currently_playing ? state.currently_playing.title : '';
                     document.getElementById('track-artists').textContent = state.currently_playing && state.currently_playing.artists ? state.currently_playing.artists.join(', ') : '';
@@ -103,6 +104,10 @@
             <tr>
                 <td>Duration</td>
                 <td id="duration"></td>
+            </tr>
+            <tr>
+                <td>Volume</td>
+                <td id="volume"></td>
             </tr>
             <tr>
                 <th colspan="2">Track</th>

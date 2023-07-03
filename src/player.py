@@ -98,6 +98,12 @@ class AudioPlayer():
         print('Seek to:', position)
         self.vlc_player.set_time(position * 1000)
 
+    def volume(self) -> int:
+        return self.vlc_player.audio_get_volume()
+
+    def set_volume(self, volume: int):
+        return self.vlc_player.audio_set_volume(volume)
+
     def now_playing_submitter(self):
         def target():
             while True:
