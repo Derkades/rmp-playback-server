@@ -45,6 +45,9 @@ class Downloader:
 
 
     def fill_cache(self):
+        if len(self.enabled_playlists) == 0:
+            return
+
         cache_size = math.ceil(self.cache_size / len(self.enabled_playlists))
         for playlist_name in self.enabled_playlists:
             if playlist_name in self.cache:
@@ -72,7 +75,7 @@ class Downloader:
         # print('Cache is ready')
 
     def select_playlist(self) -> str | None:
-        if not self.enabled_playlists:
+        if len(self.enabled_playlists) == 0:
             print('No playlists enabled!')
             return None
 
