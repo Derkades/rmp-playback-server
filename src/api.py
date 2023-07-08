@@ -82,7 +82,7 @@ class Api():
             self.playlists[playlist['name']] = Playlist(playlist['name'], tracks)
 
     def csrf(self) -> str:
-        if time.time() - self.cached_csrf_time > 300:
+        if time.time() - self.cached_csrf_time > 30*60:
             print("Getting new CSRF token")
             r = requests.get(self.server + '/get_csrf', headers=self.headers)
             r.raise_for_status()
