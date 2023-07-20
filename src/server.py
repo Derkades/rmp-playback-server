@@ -32,6 +32,10 @@ class App:
                 self.end_headers()
                 self.wfile.write(b'ok')
 
+            def post_body(self):
+                content_length = int(self.headers.get('Content-Length'))
+                return self.rfile.read(content_length)
+
             def do_GET(self):
                 if self.path == '/':
                     self.send_response(200)
@@ -103,10 +107,14 @@ class App:
                     return
 
                 if self.path == '/seek':
-                    content_length = int(self.headers.get('Content-Length'))
-                    input = self.rfile.read(content_length)
-                    position = int(input)
+                    position = int(self.post_body())
                     app.player.seek(position)
+                    self.respond_ok()
+                    return
+
+                if self.path == '/volume':
+                    volume = int(self.post_body())
+                    app.player.set_volume(volume)
                     self.respond_ok()
                     return
 

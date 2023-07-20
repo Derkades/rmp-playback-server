@@ -14,7 +14,7 @@
     "position": 15, // Current playback position (-1 when stopped)
     "position_percent": 7, // Current playback position, as a percentage
     "duration": 207, // Total track duration as reported by VLC (-1 when stopped)
-    "volume": 100 // VLC volume (0-100, -1 when stopped)
+    "volume": 100 // VLC volume (0-100, -1 when stopped, 0 at initial startup)
   },
   "currently_playing": { // May be null. Present if has_media is true
     "path": "JK/25. Resist and Bite.mp3",
@@ -52,3 +52,7 @@ If music is paused, playback is resumed. If no music was playing, a new track is
 ## POST `/next`
 
 A new track is loaded from the next playlist, and started. If no playlists are enabled, nothing happens.
+
+### POST `/volume`
+
+Set player volume. Post body should be set to an integer 0-100.
