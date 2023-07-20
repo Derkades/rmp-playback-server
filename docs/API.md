@@ -33,6 +33,10 @@
 }
 ```
 
+## GET `/image`
+
+Album cover image for currently playing track. Responds with status code 400 if no track is playing.
+
 ## POST `/playlists`
 
 Set enabled playlists. Post body should be a json array of playlist names.

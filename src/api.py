@@ -118,6 +118,14 @@ class Api():
         r.raise_for_status()
         return r.content
 
+    def get_cover_image(self, track_path: str) -> bytes:
+        r = requests.get(self.server + '/get_album_cover',
+                         params={'path': track_path,
+                                 'quality': 'high'},
+                         headers=self.headers)
+        r.raise_for_status()
+        return r.content
+
     def submit_now_playing(self, track_path: str, progress: int, paused: bool) -> None:
         print('Submit now playing')
         csrf = self.csrf()

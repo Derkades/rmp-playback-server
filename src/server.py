@@ -64,8 +64,8 @@ class App:
                             'volume': app.player.volume(),
                         }
                     }
-                    track = app.player.currently_playing
-                    if track:
+                    if app.player.currently_playing:
+                        track = app.player.currently_playing.track
                         data['currently_playing'] = {
                             'path': track.path,
                             'duration': track.duration,
@@ -80,6 +80,17 @@ class App:
                         data['currently_playing'] = None
 
                     self.wfile.write(json.dumps(data).encode())
+                    return
+
+                if self.path == '/image':
+                    if app.player.currently_playing:
+                        self.send_response(200)
+                        self.send_header('Content-Type', 'image/webp')
+                        self.end_headers()
+                        self.wfile.write(app.player.currently_playing.image)
+                    else:
+                        self.send_response(400) # Bad Request
+                        self.end_headers()
                     return
 
                 self.send_response(404)

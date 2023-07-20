@@ -9,7 +9,7 @@ import vlc
 from requests import RequestException
 
 if TYPE_CHECKING:
-    from api import Track
+    from downloader import DownloadedTrack
     from server import Api
     from downloader import Downloader
 
@@ -18,7 +18,7 @@ class AudioPlayer():
     temp_file: str
     downloader: 'Downloader'
     api: 'Api'
-    currently_playing: Optional['Track'] = None
+    currently_playing: Optional['DownloadedTrack'] = None
     vlc_instance: vlc.Instance
     vlc_player: vlc.MediaPlayer
     vlc_events: vlc.EventManager
@@ -36,12 +36,12 @@ class AudioPlayer():
         self.vlc_events = self.vlc_player.event_manager()
         self.vlc_events.event_attach(vlc.EventType.MediaPlayerEndReached, self.on_media_end)
 
-        self.now_playing_submitter()
+        self._now_playing_submitter()
 
     def on_media_end(self, event):
         print('Media ended, play next')
         def target():
-            self.api.submit_played(self.currently_playing.path)
+            self.api.submit_played(self.currently_playing.track.path)
             self.next(retry=True)
         Thread(target=target, daemon=True).start()
 
@@ -69,7 +69,7 @@ class AudioPlayer():
                 self.next(retry)
             return
 
-        self.currently_playing = download.track
+        self.currently_playing = download
         print('Playing track:', download.track.path)
 
         with open(self.temp_file, 'wb') as audio_file:
@@ -104,12 +104,12 @@ class AudioPlayer():
     def set_volume(self, volume: int):
         return self.vlc_player.audio_set_volume(volume)
 
-    def now_playing_submitter(self):
+    def _now_playing_submitter(self):
         def target():
             while True:
                 try:
                     if self.has_media() and self.currently_playing:
-                        self.api.submit_now_playing(self.currently_playing.path,
+                        self.api.submit_now_playing(self.currently_playing.track.path,
                                                     self.postition_percent(),
                                                     not self.is_playing())
                 except RequestException:

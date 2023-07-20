@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 class DownloadedTrack:
     track: 'Track'
     audio: bytes
+    image: bytes
 
 
 class Downloader:
@@ -66,7 +67,8 @@ class Downloader:
 
                 track = self.api.tracks[track_path]
                 audio = self.api.get_audio(track_path)
-                downloaded = DownloadedTrack(track, audio)
+                image = self.api.get_cover_image(track_path)
+                downloaded = DownloadedTrack(track, audio, image)
                 self.cache[playlist_name].append(downloaded)
             except RequestException:
                 print('Failed to download track for playlist', playlist_name)

@@ -34,6 +34,13 @@
                     document.getElementById('track-album').textContent = state.currently_playing ? state.currently_playing.album : '';
                     document.getElementById('track-album-artist').textContent = state.currently_playing ? state.currently_playing.album_artist : '';
                     document.getElementById('track-year').textContent = state.currently_playing ? state.currently_playing.year: '';
+
+                    // add redundant parameter to make the browser perform the request again when the path is changed
+                    if (state.currently_playing) {
+                        document.getElementById('album-cover').src = `/image#cache_bust` + encodeURIComponent(state.currently_playing.path);
+                    } else {
+                        document.getElementById('album-cover').src = "";
+                    }
                 }, 1000);
 
                 document.getElementById('get-playlists').addEventListener('click', async function() {
@@ -145,6 +152,8 @@
             </div>
             <button id="save-playlists" disabled>Save playlists</button>
         </div>
+        <h3>Album cover</h3>
+        <img src="" width="1200" style="max-width: 100%;" id="album-cover">
     </body>
 
 </html>
