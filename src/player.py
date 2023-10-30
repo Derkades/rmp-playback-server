@@ -1,9 +1,6 @@
 from threading import Thread
 from typing import TYPE_CHECKING, Optional
-import tempfile
-import os
 import time
-import traceback
 
 import vlc
 from requests import RequestException

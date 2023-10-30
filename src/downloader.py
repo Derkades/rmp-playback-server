@@ -6,9 +6,7 @@ import time
 import traceback
 import math
 
-
 from requests import RequestException
-
 
 if TYPE_CHECKING:
     from api import Track, Api
@@ -25,7 +23,7 @@ class Downloader:
     previous_playlist: Optional[str] = None
     enabled_playlists: list[str]
     cache_size: int
-    cache: dict[Deque[DownloadedTrack]]
+    cache: dict[str, Deque[DownloadedTrack]]
     api: 'Api'
 
     def __init__(self, api: 'Api', default_playlists: list[str], cache_size: int):
@@ -46,6 +44,9 @@ class Downloader:
 
 
     def fill_cache(self):
+        """
+        Ensure cache contains enough downloaded tracks
+        """
         if len(self.enabled_playlists) == 0:
             return
 
@@ -74,9 +75,10 @@ class Downloader:
                 print('Failed to download track for playlist', playlist_name)
                 time.sleep(1)
 
-        # print('Cache is ready')
-
-    def select_playlist(self) -> str | None:
+    def select_playlist(self) -> Optional[str]:
+        """
+        Choose a playlist to play a track from.
+        """
         if len(self.enabled_playlists) == 0:
             print('No playlists enabled!')
             return None
@@ -94,6 +96,9 @@ class Downloader:
         return self.previous_playlist
 
     def get_track(self) -> Optional[DownloadedTrack]:
+        """
+        Get the next track to play
+        """
         playlist = self.select_playlist()
         if playlist is None:
             return None

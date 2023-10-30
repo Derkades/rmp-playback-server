@@ -1,10 +1,8 @@
-from typing import TYPE_CHECKING, Deque
 import uuid
 import time
 from dataclasses import dataclass
 
 import requests
-from requests import RequestException
 
 
 @dataclass
@@ -16,7 +14,6 @@ class Track:
     album_artist: str
     year: int
     artists: list[str] | None
-    tags: list[str]
 
 
 @dataclass
@@ -74,8 +71,7 @@ class Api():
                                   track['album'],
                                   track['album_artist'],
                                   track['year'],
-                                  track['artists'],
-                                  track['tags'])
+                                  track['artists'])
                 tracks[track['path']] = track_obj
                 self.tracks[track['path']] = track_obj
 

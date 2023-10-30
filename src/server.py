@@ -1,6 +1,5 @@
 import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
-import shutil
 from pathlib import Path
 
 from player import AudioPlayer
@@ -26,30 +25,29 @@ class App:
     def start_server(app, bind: str, port: int):
         class RequestHandler(BaseHTTPRequestHandler):
 
-            def respond_ok(self):
+            def respond(self, content_type: str, response: bytes):
                 self.send_response(200)
-                self.send_header('Content-Type', 'text/plain')
+                self.send_header('Content-Type', content_type)
                 self.end_headers()
-                self.wfile.write(b'ok')
+                self.wfile.write(response)
 
-            def post_body(self):
+            def respond_ok(self) -> None:
+                self.respond('text/plain', b'ok')
+
+            def respond_json(self, obj) -> None:
+                self.respond('application/json', json.dumps(obj).encode())
+
+            def post_body(self) -> str:
                 content_length = int(self.headers.get('Content-Length'))
-                return self.rfile.read(content_length)
+                return self.rfile.read(content_length).decode()
 
             def do_GET(self):
                 if self.path == '/':
-                    self.send_response(200)
-                    self.send_header('Content-Type', 'text/html')
-                    self.end_headers()
-
                     with Path(Path(__file__).parent, 'index.html').open('rb') as index_file:
-                        shutil.copyfileobj(index_file, self.wfile)
+                        self.respond('text/html', index_file.read())
                     return
 
                 if self.path == '/state':
-                    self.send_response(200)
-                    self.send_header('Content-Type', 'application/json')
-                    self.end_headers()
                     data = {
                         'playlists': {
                             'all': list(app.api.playlists.keys()),
@@ -74,20 +72,16 @@ class App:
                             'album_artist': track.album_artist,
                             'year': track.year,
                             'artists': track.artists,
-                            'tags': track.tags,
                         }
                     else:
                         data['currently_playing'] = None
 
-                    self.wfile.write(json.dumps(data).encode())
+                    self.respond_json(data)
                     return
 
                 if self.path == '/image':
                     if app.player.currently_playing:
-                        self.send_response(200)
-                        self.send_header('Content-Type', 'image/webp')
-                        self.end_headers()
-                        self.wfile.write(app.player.currently_playing.image)
+                        self.respond('image/webp', app.player.currently_playing.image)
                     else:
                         self.send_response(400) # Bad Request
                         self.end_headers()
@@ -130,9 +124,7 @@ class App:
                     return
 
                 if self.path == '/playlists':
-                    content_length = int(self.headers.get('Content-Length'))
-                    input = self.rfile.read(content_length)
-                    playlists = json.loads(input.decode())
+                    playlists = json.loads(self.post_body())
                     assert isinstance(playlists, list)
                     for playlist in playlists:
                         assert isinstance(playlist, str)
