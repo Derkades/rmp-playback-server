@@ -42,9 +42,8 @@ class Api():
         self.player_id = str(uuid.uuid4())
         self.headers = {'User-Agent': 'rmp-playback-server'}
         print('Logging in')
-        r = requests.post(self.server + '/login',
-                        headers={'Content-Type': 'application/json',
-                                 **self.headers},
+        r = requests.post(self.server + '/auth/login',
+                        headers={'Content-Type': 'application/json', **self.headers},
                         json={'username': config['username'], 'password': config['password']})
         r.raise_for_status()
         token = r.json()['token']
@@ -54,7 +53,7 @@ class Api():
 
     def update_track_list(self):
         print('Downloading playlist and track list')
-        r = requests.get(self.server + '/track_list',
+        r = requests.get(self.server + '/track/list',
                          headers=self.headers)
         r.raise_for_status()
 
@@ -80,7 +79,7 @@ class Api():
     def csrf(self) -> str:
         if time.time() - self.cached_csrf_time > 30*60:
             print("Getting new CSRF token")
-            r = requests.get(self.server + '/get_csrf', headers=self.headers)
+            r = requests.get(self.server + '/auth/get_csrf', headers=self.headers)
             r.raise_for_status()
             self.cached_csrf = r.json()['token']
             self.cached_csrf_time = int(time.time())
@@ -89,15 +88,15 @@ class Api():
 
     def choose_track(self, playlist: str) -> str:
         csrf = self.csrf()
-        r = requests.get(self.server + '/choose_track',
-                         params={'csrf': csrf,
-                                 'playlist_dir': playlist},
-                         headers=self.headers)
+        r = requests.post(self.server + '/track/choose',
+                          headers={'Content-Type': 'application/json', **self.headers},
+                          json={'csrf': csrf,
+                                'playlist_dir': playlist})
         r.raise_for_status()
         return r.json()['path']
 
     def download_to_pipe(self, track_path: str, stdin) -> None:
-        r = requests.get(self.server + '/get_track',
+        r = requests.get(self.server + '/track/audio',
                          params={'path': track_path,
                                  'type': 'webm_opus_high'},
                          headers=self.headers,
@@ -107,7 +106,7 @@ class Api():
             stdin.write(chunk)
 
     def get_audio(self, track_path: str) -> bytes:
-        r = requests.get(self.server + '/get_track',
+        r = requests.get(self.server + '/track/audio',
                          params={'path': track_path,
                                  'type': 'webm_opus_high'},
                          headers=self.headers)
@@ -115,7 +114,7 @@ class Api():
         return r.content
 
     def get_cover_image(self, track_path: str) -> bytes:
-        r = requests.get(self.server + '/get_album_cover',
+        r = requests.get(self.server + '/track/album_cover',
                          params={'path': track_path,
                                  'quality': 'high'},
                          headers=self.headers)
@@ -125,7 +124,7 @@ class Api():
     def submit_now_playing(self, track_path: str, progress: int, paused: bool) -> None:
         print('Submit now playing')
         csrf = self.csrf()
-        r = requests.post(self.server + '/now_playing',
+        r = requests.post(self.server + '/activity/now_playing',
                           json={'csrf': csrf,
                                 'player_id': self.player_id,
                                 'track': track_path,
@@ -139,7 +138,7 @@ class Api():
     def submit_played(self, track_path: str):
         print('Submit played')
         csrf = self.csrf()
-        r = requests.post(self.server + '/history_played',
+        r = requests.post(self.server + '/activity/played',
                           json={'csrf': csrf,
                                 'track': track_path,
                                 'lastfmEligible': False},  # TODO determine eligibility properly

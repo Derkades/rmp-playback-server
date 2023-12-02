@@ -73,6 +73,7 @@ class Downloader:
                 self.cache[playlist_name].append(downloaded)
             except RequestException:
                 print('Failed to download track for playlist', playlist_name)
+                traceback.print_exc()
                 time.sleep(1)
 
     def select_playlist(self) -> Optional[str]:

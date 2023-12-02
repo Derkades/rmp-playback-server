@@ -1,5 +1,9 @@
 # API
 
+## GET `/`
+
+Basic web UI
+
 ## GET `/state`
 
 ```json
