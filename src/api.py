@@ -1,8 +1,8 @@
 import uuid
-import time
 from dataclasses import dataclass
-
+from urllib.parse import quote
 import requests
+from typing import Optional
 
 
 @dataclass
@@ -34,36 +34,44 @@ class Api():
     playlists: dict[str, Playlist]
     tracks: dict[str, Track]
     player_id: str
-    cached_csrf: str = None
-    cached_csrf_time: int = 0
+    csrf: Optional[str] = None
 
     def __init__(self, config):
         self.server = config['server']
         self.player_id = str(uuid.uuid4())
         self.headers = {'User-Agent': 'rmp-playback-server'}
         print('Logging in')
-        r = requests.post(self.server + '/auth/login',
-                        headers={'Content-Type': 'application/json', **self.headers},
-                        json={'username': config['username'], 'password': config['password']})
-        r.raise_for_status()
-        token = r.json()['token']
+        token = self._post('/auth/login', {'username': config['username'], 'password': config['password']}).json()['token']
         self.headers['Cookie'] = 'token=' + token
+
+        print("Getting CSRF token")
+        self.csrf = self._get('/auth/get_csrf').json()['token']
 
         self.update_track_list()
 
-    def update_track_list(self):
-        print('Downloading playlist and track list')
-        r = requests.get(self.server + '/track/list',
-                         headers=self.headers)
+    def _get(self, endpoint):
+        r = requests.get(self.server + endpoint, headers=self.headers, timeout=60)
         r.raise_for_status()
+        return r
 
-        track_list = r.json()
+    def _post(self, endpoint, json):
+        if self.csrf:
+            json['csrf'] = self.csrf
+        r = requests.post(self.server + endpoint,
+                          headers={'Content-Type': 'application/json', **self.headers},
+                          json=json,
+                          timeout=60)
+        r.raise_for_status()
+        return r
+
+    def update_track_list(self):
         self.playlists = {}
         self.tracks = {}
 
-        for playlist in track_list['playlists']:
+        for playlist in self._get('/playlist/list').json():
+            print('Downloading track list:', playlist['name'])
             tracks: dict[str, Track] = {}
-            for track in playlist['tracks']:
+            for track in self._get('/track/filter?playlist=' + quote(playlist['name'])).json()['tracks']:
                 track_obj = Track(track['path'],
                                   track['duration'],
                                   track['title'],
@@ -76,72 +84,23 @@ class Api():
 
             self.playlists[playlist['name']] = Playlist(playlist['name'], tracks)
 
-    def csrf(self) -> str:
-        if time.time() - self.cached_csrf_time > 30*60:
-            print("Getting new CSRF token")
-            r = requests.get(self.server + '/auth/get_csrf', headers=self.headers)
-            r.raise_for_status()
-            self.cached_csrf = r.json()['token']
-            self.cached_csrf_time = int(time.time())
-
-        return self.cached_csrf
-
     def choose_track(self, playlist: str) -> str:
-        csrf = self.csrf()
-        r = requests.post(self.server + '/track/choose',
-                          headers={'Content-Type': 'application/json', **self.headers},
-                          json={'csrf': csrf,
-                                'playlist_dir': playlist})
-        r.raise_for_status()
-        return r.json()['path']
-
-    def download_to_pipe(self, track_path: str, stdin) -> None:
-        r = requests.get(self.server + '/track/audio',
-                         params={'path': track_path,
-                                 'type': 'webm_opus_high'},
-                         headers=self.headers,
-                         stream=True)
-        r.raise_for_status()
-        for chunk in r.iter_content(4096):
-            stdin.write(chunk)
+        return self._post('/playlist/' + quote(playlist) + '/choose_track', {}).json()['path']
 
     def get_audio(self, track_path: str) -> bytes:
-        r = requests.get(self.server + '/track/audio',
-                         params={'path': track_path,
-                                 'type': 'webm_opus_high'},
-                         headers=self.headers)
-        r.raise_for_status()
-        return r.content
+        return self._get('/track/' + track_path + '/audio?type=webm_opus_high').content
 
     def get_cover_image(self, track_path: str) -> bytes:
-        r = requests.get(self.server + '/track/album_cover',
-                         params={'path': track_path,
-                                 'quality': 'high'},
-                         headers=self.headers)
-        r.raise_for_status()
-        return r.content
+        return self._get('/track/' + track_path + '/cover?quality=high').content
 
     def submit_now_playing(self, track_path: str, progress: int, paused: bool) -> None:
         print('Submit now playing')
-        csrf = self.csrf()
-        r = requests.post(self.server + '/activity/now_playing',
-                          json={'csrf': csrf,
-                                'player_id': self.player_id,
-                                'track': track_path,
-                                'paused': paused,
-                                'progress': progress},
-                          headers={'Content-Type': 'application/json',
-                                   **self.headers})
-        r.raise_for_status()
-
+        self._post('/activity/now_playing',
+                   {'player_id': self.player_id,
+                    'track': track_path,
+                    'paused': paused,
+                    'progress': progress})
 
     def submit_played(self, track_path: str):
         print('Submit played')
-        csrf = self.csrf()
-        r = requests.post(self.server + '/activity/played',
-                          json={'csrf': csrf,
-                                'track': track_path,
-                                'lastfmEligible': False},  # TODO determine eligibility properly
-                          headers={'Content-Type': 'application/json',
-                                   **self.headers})
-        r.raise_for_status()
+        self._post('/activity/played', {'track': track_path})
