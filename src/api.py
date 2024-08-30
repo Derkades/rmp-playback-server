@@ -25,14 +25,12 @@ class DownloadedTrack:
 @dataclass
 class Playlist:
     name: str
-    tracks: dict[str, Track]
 
 
 class Api():
     server: str
     headers: dict[str, str]
     playlists: dict[str, Playlist]
-    tracks: dict[str, Track]
     player_id: str
     csrf: Optional[str] = None
 
@@ -47,7 +45,7 @@ class Api():
         print("Getting CSRF token")
         self.csrf = self._get('/auth/get_csrf').json()['token']
 
-        self.update_track_list()
+        self.update_playlists()
 
     def _get(self, endpoint):
         r = requests.get(self.server + endpoint, headers=self.headers, timeout=60)
@@ -64,28 +62,16 @@ class Api():
         r.raise_for_status()
         return r
 
-    def update_track_list(self):
+    def update_playlists(self):
+        print('Updating playlists')
+
         self.playlists = {}
-        self.tracks = {}
-
         for playlist in self._get('/playlist/list').json():
-            print('Downloading track list:', playlist['name'])
-            tracks: dict[str, Track] = {}
-            for track in self._get('/track/filter?playlist=' + quote(playlist['name'])).json()['tracks']:
-                track_obj = Track(track['path'],
-                                  track['duration'],
-                                  track['title'],
-                                  track['album'],
-                                  track['album_artist'],
-                                  track['year'],
-                                  track['artists'])
-                tracks[track['path']] = track_obj
-                self.tracks[track['path']] = track_obj
+            self.playlists[playlist['name']] = Playlist(playlist['name'])
 
-            self.playlists[playlist['name']] = Playlist(playlist['name'], tracks)
-
-    def choose_track(self, playlist: str) -> str:
-        return self._post('/playlist/' + quote(playlist) + '/choose_track', {}).json()['path']
+    def choose_track(self, playlist: str) -> Track:
+        json = self._post('/playlist/' + quote(playlist) + '/choose_track', {}).json()
+        return Track(json['path'], json['duration'], json['title'], json['album'], json['album_artist'], json['year'], json['artists'])
 
     def get_audio(self, track_path: str) -> bytes:
         return self._get('/track/' + track_path + '/audio?type=webm_opus_high').content

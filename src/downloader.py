@@ -59,16 +59,11 @@ class Downloader:
                 self.cache[playlist_name] = deque()
 
             try:
-                track_path = self.api.choose_track(playlist_name)
-                print('Download:', track_path)
+                track = self.api.choose_track(playlist_name)
+                print('Download:', track.path)
 
-                if track_path not in self.api.tracks:
-                    print('Track not in local track list')
-                    time.sleep(1)
-
-                track = self.api.tracks[track_path]
-                audio = self.api.get_audio(track_path)
-                image = self.api.get_cover_image(track_path)
+                audio = self.api.get_audio(track.path)
+                image = self.api.get_cover_image(track.path)
                 downloaded = DownloadedTrack(track, audio, image)
                 self.cache[playlist_name].append(downloaded)
             except RequestException:
