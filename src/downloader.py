@@ -1,3 +1,4 @@
+from datetime import date, datetime
 from typing import TYPE_CHECKING
 from collections import deque
 from dataclasses import dataclass
@@ -13,23 +14,25 @@ if TYPE_CHECKING:
 
 @dataclass
 class DownloadedTrack:
-    track: 'Track'
+    track: 'Track | None'
     audio: bytes
     image: bytes
 
 
 class Downloader:
+    api: 'Api'
+    cache: dict[str, deque[DownloadedTrack]] = {}
     previous_playlist: str | None = None
     enabled_playlists: list[str]
     cache_size: int
-    cache: dict[str, deque[DownloadedTrack]]
-    api: 'Api'
+    news: bool
+    last_news: int = 0
 
-    def __init__(self, api: 'Api', default_playlists: list[str], cache_size: int):
-        self.cache = {}
+    def __init__(self, api: 'Api', default_playlists: list[str], cache_size: int, news: bool):
         self.api = api
         self.enabled_playlists = default_playlists
         self.cache_size = cache_size
+        self.news = news
 
         def target():
             while True:
@@ -40,7 +43,6 @@ class Downloader:
                 time.sleep(1)
 
         Thread(target=target, daemon=True).start()
-
 
     def fill_cache(self):
         """
@@ -93,6 +95,19 @@ class Downloader:
         """
         Get the next track to play
         """
+        if self.news:
+            minute = datetime.now().minute
+            # few minutes past the hour and last news played more than 30 minutes ago?
+            if minute > 7 and minute < 15 and time.time() - self.last_news > 30*60:
+                # attempt to download news
+                try:
+                    audio = self.api.get_news()
+                    image = self.api.get_raphson()
+                    self.last_news = int(time.time())
+                    return DownloadedTrack(None, audio, image)
+                except:
+                    traceback.print_exc()
+
         playlist = self.select_playlist()
         if playlist is None:
             return None

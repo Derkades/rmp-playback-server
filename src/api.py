@@ -90,3 +90,9 @@ class Api():
     def submit_played(self, track_path: str, timestamp: int):
         print('Submit played')
         self._post('/activity/played', {'track': track_path, 'timestamp': timestamp})
+
+    def get_news(self) -> bytes:
+        return self._get('/news/audio').content
+
+    def get_raphson(self) -> bytes:
+        return self._get('/static/img/raphson_small.webp').content

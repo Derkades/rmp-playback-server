@@ -20,7 +20,7 @@ Basic web UI
     "duration": 207, // Total track duration as reported by VLC (-1 when stopped)
     "volume": 100 // VLC volume (0-100, -1 when stopped, 0 at initial startup)
   },
-  "currently_playing": { // May be null. Present if has_media is true
+  "currently_playing": { // May be null, if no media is present or if playing a virtual track like news
     "path": "JK/25. Resist and Bite.mp3",
     "duration": 207, // Duration as reported by the server. For seek bars, use the duration in the player section instead.
     "title": "Resist And Bite", // May be null

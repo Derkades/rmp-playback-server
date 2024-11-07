@@ -18,7 +18,7 @@ class App:
             config = json.load(config_file)
 
         self.api = Api(config)
-        self.downloader = Downloader(self.api, config['default_playlists'], config["cache_size"])
+        self.downloader = Downloader(self.api, config['default_playlists'], config["cache_size"], config["news"])
         self.player = AudioPlayer(self.api, self.downloader)
 
         self.start_server(config['bind'], config['port'])
@@ -66,7 +66,7 @@ class App:
                             'volume': app.player.volume(),
                         }
                     }
-                    if app.player.currently_playing:
+                    if app.player.currently_playing and app.player.currently_playing.track:
                         track = app.player.currently_playing.track
                         data['currently_playing'] = {
                             'path': track.path,

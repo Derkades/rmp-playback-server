@@ -82,8 +82,10 @@ class AudioPlayer():
 
         self.currently_playing = download
         self.start_timestamp = int(time.time())
-        print('Playing track:', download.track.path)
-
+        if download.track:
+            print('Playing track:', download.track.path)
+        else:
+            print('Playing virtual track')
         temp_file = NamedTemporaryFile('wb', prefix='rmp-playback-server-')
 
         try:
