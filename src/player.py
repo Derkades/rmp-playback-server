@@ -37,10 +37,13 @@ class AudioPlayer():
 
     def on_media_end(self, event):
         print('Media ended, play next')
-        def target():
-            self.api.submit_played(self.currently_playing.track.path)
+        def target1():
             self.next(retry=True)
-        Thread(target=target, daemon=True).start()
+        def target2():
+            if self.currently_playing:
+                self.api.submit_played(self.currently_playing.track.path)
+        Thread(target=target1).start()
+        Thread(target=target2).start()
 
     def stop(self):
         self.vlc_player.stop()
