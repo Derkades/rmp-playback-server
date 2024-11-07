@@ -20,6 +20,7 @@ class AudioPlayer():
     vlc_instance: vlc.Instance
     vlc_player: vlc.MediaPlayer
     vlc_events: vlc.EventManager
+    start_timestamp: int = 0
 
     def __init__(self,
                  api: 'Api',
@@ -36,13 +37,19 @@ class AudioPlayer():
 
     def on_media_end(self, event):
         print('Media ended, play next')
-        def target1():
-            self.next(retry=True)
-        def target2():
+        def target():
             if self.currently_playing:
-                self.api.submit_played(self.currently_playing.track.path)
-        Thread(target=target1).start()
-        Thread(target=target2).start()
+                # save current info before it is replaced by the next track
+                path = self.currently_playing.track.path
+                start_timestamp = self.start_timestamp
+                def submit_played():
+                    self.api.submit_played(path, start_timestamp)
+                # submit in other thread, so next track can start immediately
+                Thread(target=submit_played).start()
+
+            self.next(retry=True)
+
+        Thread(target=target).start()
 
     def stop(self):
         try:
@@ -73,6 +80,7 @@ class AudioPlayer():
             return
 
         self.currently_playing = download
+        self.start_timestamp = int(time.time())
         print('Playing track:', download.track.path)
 
         temp_file = NamedTemporaryFile('wb', prefix='rmp-playback-server-')

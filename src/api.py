@@ -87,6 +87,6 @@ class Api():
                     'paused': paused,
                     'progress': progress})
 
-    def submit_played(self, track_path: str):
+    def submit_played(self, track_path: str, timestamp: int):
         print('Submit played')
-        self._post('/activity/played', {'track': track_path})
+        self._post('/activity/played', {'track': track_path, 'timestamp': timestamp})
