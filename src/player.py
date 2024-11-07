@@ -1,3 +1,4 @@
+from tempfile import _TemporaryFileWrapper, NamedTemporaryFile
 from threading import Thread
 from typing import TYPE_CHECKING, Optional
 import time
@@ -12,7 +13,7 @@ if TYPE_CHECKING:
 
 
 class AudioPlayer():
-    temp_file: str
+    temp_file: '_TemporaryFileWrapper[bytes] | None' = None
     downloader: 'Downloader'
     api: 'Api'
     currently_playing: Optional['DownloadedTrack'] = None
@@ -21,10 +22,8 @@ class AudioPlayer():
     vlc_events: vlc.EventManager
 
     def __init__(self,
-                 use_shm: bool,
                  api: 'Api',
                  downloader: 'Downloader'):
-        self.temp_file = '/dev/shm/rmp-audio' if use_shm else '/tmp/rmp-audio'
         self.api = api
         self.downloader = downloader
 
@@ -46,9 +45,13 @@ class AudioPlayer():
         Thread(target=target2).start()
 
     def stop(self):
-        self.vlc_player.stop()
-        self.vlc_player.set_media(None)
-        self.currently_playing = None
+        try:
+            self.vlc_player.stop()
+            self.vlc_player.set_media(None)
+            self.currently_playing = None
+        finally:
+            if self.temp_file:
+                self.temp_file.close()
 
     def pause(self):
         self.vlc_player.set_pause(True)
@@ -72,12 +75,21 @@ class AudioPlayer():
         self.currently_playing = download
         print('Playing track:', download.track.path)
 
-        with open(self.temp_file, 'wb') as audio_file:
-            audio_file.write(download.audio)
+        temp_file = NamedTemporaryFile('wb', prefix='rmp-playback-server-')
 
-        media = self.vlc_instance.media_new(self.temp_file)
-        self.vlc_player.set_media(media)
-        self.vlc_player.play()
+        try:
+            temp_file.truncate(0)
+            temp_file.write(download.audio)
+
+            media = self.vlc_instance.media_new(temp_file.name)
+            self.vlc_player.set_media(media)
+            self.vlc_player.play()
+        finally:
+            # Remove old temp file
+            if self.temp_file:
+                self.temp_file.close()
+            # Store current temp file so it can be removed later
+            self.temp_file = temp_file
 
     def has_media(self) -> bool:
         return self.vlc_player.get_media() is not None

@@ -5,6 +5,5 @@
     "username": "",
     "password": "",
     "default_playlists": [],
-    "use_shm": true,
     "cache_size": 10
 }

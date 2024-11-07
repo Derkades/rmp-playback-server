@@ -18,9 +18,12 @@ class App:
 
         self.api = Api(config)
         self.downloader = Downloader(self.api, config['default_playlists'], config["cache_size"])
-        self.player = AudioPlayer(config["use_shm"], self.api, self.downloader)
+        self.player = AudioPlayer(self.api, self.downloader)
 
         self.start_server(config['bind'], config['port'])
+
+    def shutdown(self) -> None:
+        self.player.stop()
 
     def start_server(app, bind: str, port: int):
         class RequestHandler(BaseHTTPRequestHandler):
@@ -145,6 +148,7 @@ class App:
         except KeyboardInterrupt:
             pass
 
+        app.shutdown()
         server.server_close()
 
 
