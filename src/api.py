@@ -1,8 +1,8 @@
+from typing import Any, cast
 import uuid
 from dataclasses import dataclass
 from urllib.parse import quote
 import requests
-from typing import Optional
 
 
 @dataclass
@@ -30,9 +30,9 @@ class Playlist:
 class Api():
     server: str
     headers: dict[str, str]
-    playlists: dict[str, Playlist]
+    playlists: dict[str, Playlist] = {}
     player_id: str
-    csrf: Optional[str] = None
+    csrf: str | None = None
 
     def __init__(self, config):
         self.server = config['server']
@@ -43,16 +43,16 @@ class Api():
         self.headers['Cookie'] = 'token=' + token
 
         print("Getting CSRF token")
-        self.csrf = self._get('/auth/get_csrf').json()['token']
+        self.csrf = cast(str, self._get('/auth/get_csrf').json()['token'])
 
         self.update_playlists()
 
-    def _get(self, endpoint):
+    def _get(self, endpoint: str):
         r = requests.get(self.server + endpoint, headers=self.headers, timeout=60)
         r.raise_for_status()
         return r
 
-    def _post(self, endpoint, json):
+    def _post(self, endpoint: str, json: Any):
         if self.csrf:
             json['csrf'] = self.csrf
         r = requests.post(self.server + endpoint,

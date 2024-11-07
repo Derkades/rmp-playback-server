@@ -1,6 +1,7 @@
 import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
+from typing import Any, cast
 
 from player import AudioPlayer
 from api import Api
@@ -37,7 +38,7 @@ class App:
             def respond_ok(self) -> None:
                 self.respond('text/plain', b'ok')
 
-            def respond_json(self, obj) -> None:
+            def respond_json(self, obj: Any) -> None:
                 self.respond('application/json', json.dumps(obj).encode())
 
             def post_body(self) -> str:
@@ -51,7 +52,7 @@ class App:
                     return
 
                 if self.path == '/state':
-                    data = {
+                    data: dict[str, Any] = {
                         'playlists': {
                             'all': list(app.api.playlists.keys()),
                             'enabled': app.downloader.enabled_playlists,
@@ -127,7 +128,7 @@ class App:
                     return
 
                 if self.path == '/playlists':
-                    playlists = json.loads(self.post_body())
+                    playlists = cast(list[str], json.loads(self.post_body()))
                     assert isinstance(playlists, list)
                     for playlist in playlists:
                         assert isinstance(playlist, str)

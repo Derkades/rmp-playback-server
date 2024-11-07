@@ -1,10 +1,9 @@
-from typing import TYPE_CHECKING, Deque, Optional
+from typing import TYPE_CHECKING
 from collections import deque
 from dataclasses import dataclass
 from threading import Thread
 import time
 import traceback
-import math
 
 from requests import RequestException
 
@@ -20,10 +19,10 @@ class DownloadedTrack:
 
 
 class Downloader:
-    previous_playlist: Optional[str] = None
+    previous_playlist: str | None = None
     enabled_playlists: list[str]
     cache_size: int
-    cache: dict[str, Deque[DownloadedTrack]]
+    cache: dict[str, deque[DownloadedTrack]]
     api: 'Api'
 
     def __init__(self, api: 'Api', default_playlists: list[str], cache_size: int):
@@ -70,7 +69,7 @@ class Downloader:
                 traceback.print_exc()
                 time.sleep(1)
 
-    def select_playlist(self) -> Optional[str]:
+    def select_playlist(self) -> str | None:
         """
         Choose a playlist to play a track from.
         """
@@ -90,7 +89,7 @@ class Downloader:
         print('Chosen playlist:', self.previous_playlist)
         return self.previous_playlist
 
-    def get_track(self) -> Optional[DownloadedTrack]:
+    def get_track(self) -> DownloadedTrack | None:
         """
         Get the next track to play
         """

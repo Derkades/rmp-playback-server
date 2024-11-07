@@ -1,22 +1,23 @@
-from tempfile import _TemporaryFileWrapper, NamedTemporaryFile
+from tempfile import NamedTemporaryFile
 from threading import Thread
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, cast
 import time
 
 import vlc
 from requests import RequestException
 
+from downloader import DownloadedTrack
+from downloader import Downloader
+
 if TYPE_CHECKING:
-    from downloader import DownloadedTrack
-    from server import Api
-    from downloader import Downloader
+    from tempfile import _TemporaryFileWrapper  # pyright: ignore[reportPrivateUsage]
 
 
 class AudioPlayer():
     temp_file: '_TemporaryFileWrapper[bytes] | None' = None
     downloader: 'Downloader'
     api: 'Api'
-    currently_playing: Optional['DownloadedTrack'] = None
+    currently_playing: DownloadedTrack | None = None
     vlc_instance: vlc.Instance
     vlc_player: vlc.MediaPlayer
     vlc_events: vlc.EventManager
@@ -69,7 +70,7 @@ class AudioPlayer():
         else:
             self.next()
 
-    def next(self, retry=False):
+    def next(self, retry: bool = False):
         download = self.downloader.get_track()
         if not download:
             print('No cached track available')
@@ -103,18 +104,18 @@ class AudioPlayer():
         return self.vlc_player.get_media() is not None
 
     def is_playing(self) -> bool:
-        return self.vlc_player.is_playing() == 1
+        return cast(int, self.vlc_player.is_playing()) == 1
 
     def position(self) -> int:
-        return self.vlc_player.get_time() // 1000
+        return cast(int, self.vlc_player.get_time()) // 1000
 
     def duration(self) -> int:
-        return self.vlc_player.get_length() // 1000
+        return cast(int, self.vlc_player.get_length()) // 1000
 
     def position_percent(self) -> int:
-        if self.vlc_player.get_length() == 0:
+        if self.position() == 0:
             return 0
-        return int(self.vlc_player.get_time() / self.vlc_player.get_length() * 100)
+        return int(self.position() / self.duration() * 100)
 
     def seek(self, position: int):
         print('Seek to:', position)
