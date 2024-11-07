@@ -50,10 +50,9 @@ class Downloader:
         if len(self.enabled_playlists) == 0:
             return
 
-        cache_size = math.ceil(self.cache_size / len(self.enabled_playlists))
         for playlist_name in self.enabled_playlists:
             if playlist_name in self.cache:
-                if len(self.cache[playlist_name]) >= cache_size:
+                if len(self.cache[playlist_name]) >= self.cache_size:
                     break
             else:
                 self.cache[playlist_name] = deque()

@@ -132,7 +132,7 @@ class AudioPlayer():
                 try:
                     if self.has_media() and self.currently_playing:
                         self.api.submit_now_playing(self.currently_playing.track.path,
-                                                    self.postition_percent(),
+                                                    self.position_percent(),
                                                     not self.is_playing())
                 except RequestException:
                     print('Failed to submit now playing info')
