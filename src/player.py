@@ -105,13 +105,13 @@ class AudioPlayer():
     def is_playing(self) -> bool:
         return self.vlc_player.is_playing() == 1
 
-    def postition(self) -> int:
+    def position(self) -> int:
         return self.vlc_player.get_time() // 1000
 
     def duration(self) -> int:
         return self.vlc_player.get_length() // 1000
 
-    def postition_percent(self) -> int:
+    def position_percent(self) -> int:
         if self.vlc_player.get_length() == 0:
             return 0
         return int(self.vlc_player.get_time() / self.vlc_player.get_length() * 100)

@@ -59,8 +59,8 @@ class App:
                         'player': {
                             'has_media': app.player.has_media(),
                             'is_playing': app.player.is_playing(),
-                            'position': app.player.postition(),
-                            'position_percent': app.player.postition_percent(),
+                            'position': app.player.position(),
+                            'position_percent': app.player.position_percent(),
                             'duration': app.player.duration(),
                             'volume': app.player.volume(),
                         }
