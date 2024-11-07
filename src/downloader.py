@@ -53,7 +53,7 @@ class Downloader:
         for playlist_name in self.enabled_playlists:
             if playlist_name in self.cache:
                 if len(self.cache[playlist_name]) >= self.cache_size:
-                    break
+                    continue
             else:
                 self.cache[playlist_name] = deque()
 
