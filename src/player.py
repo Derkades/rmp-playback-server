@@ -92,6 +92,8 @@ class AudioPlayer():
         return self.vlc_player.get_length() // 1000
 
     def postition_percent(self) -> int:
+        if self.vlc_player.get_length() == 0:
+            return 0
         return int(self.vlc_player.get_time() / self.vlc_player.get_length() * 100)
 
     def seek(self, position: int):
