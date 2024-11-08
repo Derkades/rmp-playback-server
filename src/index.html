@@ -18,7 +18,7 @@
                     fetch('/stop', {method: 'POST'})
                 });
 
-                setInterval(async function() {
+                setInterval(async () => {
                     const response = await fetch('/state');
                     const state = await response.json();
                     const player = state.player;
@@ -43,7 +43,13 @@
                     }
                 }, 1000);
 
-                document.getElementById('get-playlists').addEventListener('click', async function() {
+                setInterval(async () => {
+                    const response = await fetch('/lyrics');
+                    const lyrics = await response.text();
+                    document.getElementById('lyrics').textContent = lyrics;
+                }, 2000);
+
+                document.getElementById('get-playlists').addEventListener('click', async () => {
                     const response = await fetch('/state');
                     const state = await response.json();
                     const playlists = state.playlists;
@@ -69,7 +75,7 @@
                     document.getElementById('get-playlists').setAttribute('disabled', '');
                 });
 
-                document.getElementById('save-playlists').addEventListener('click', async function() {
+                document.getElementById('save-playlists').addEventListener('click', async () => {
                     const playlists = []
                     for (checkbox of document.getElementsByClassName('playlist-checkbox')) {
                         if (checkbox.checked) {
@@ -152,6 +158,10 @@
             </div>
             <button id="save-playlists" disabled>Save playlists</button>
         </div>
+
+        <h3>Lyrics</h3>
+        <div id="lyrics" style="white-space: pre-line"></div>
+
         <h3>Album cover</h3>
         <img src="" width="1200" style="max-width: 100%;" id="album-cover">
     </body>

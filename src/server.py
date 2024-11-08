@@ -91,6 +91,14 @@ class App:
                         self.end_headers()
                     return
 
+                if self.path == '/lyrics':
+                    if app.player.currently_playing and app.player.currently_playing.lyrics:
+                        self.respond('text/plain', app.player.currently_playing.lyrics.encode())
+                    else:
+                        self.send_response(204) # No Content
+                        self.end_headers()
+                    return
+
                 self.send_response(404)
                 self.end_headers()
 

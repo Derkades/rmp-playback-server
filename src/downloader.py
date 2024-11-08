@@ -17,6 +17,7 @@ class DownloadedTrack:
     track: 'Track | None'
     audio: bytes
     image: bytes
+    lyrics: str | None
 
 
 class Downloader:
@@ -64,7 +65,8 @@ class Downloader:
 
                 audio = self.api.get_audio(track.path)
                 image = self.api.get_cover_image(track.path)
-                downloaded = DownloadedTrack(track, audio, image)
+                lyrics = self.api.get_lyrics(track.path)
+                downloaded = DownloadedTrack(track, audio, image, lyrics)
                 self.cache[playlist_name].append(downloaded)
             except RequestException:
                 print('Failed to download track for playlist', playlist_name)
@@ -104,7 +106,7 @@ class Downloader:
                     audio = self.api.get_news()
                     image = self.api.get_raphson()
                     self.last_news = int(time.time())
-                    return DownloadedTrack(None, audio, image)
+                    return DownloadedTrack(None, audio, image, None)
                 except:
                     traceback.print_exc()
 

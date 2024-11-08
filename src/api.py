@@ -79,6 +79,10 @@ class Api():
     def get_cover_image(self, track_path: str) -> bytes:
         return self._get('/track/' + track_path + '/cover?quality=high').content
 
+    def get_lyrics(self, track_path: str) -> str | None:
+        json = self._get('/track/' + track_path + '/lyrics?type=plain').json()
+        return json['text'] if json['type'] == 'plain' else None
+
     def submit_now_playing(self, track_path: str, progress: int, paused: bool) -> None:
         print('Submit now playing')
         self._post('/activity/now_playing',
